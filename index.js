@@ -1,27 +1,32 @@
-const contacts = require("./contacts.js");
-const argv = require("yargs").argv;
+require("dotenv").config();
+const express = require("express");
+const contactsRouter = require("./router/index");
+const cors = require("cors");
+const userRouter = require('./router/userRouter')
+const ContactsDatabase = require("./server");
+const auth = require('./middleware/auth')
 
-function invokeAction({ action, id, name, email, phone }) {
-  switch (action) {
-    case "list":
-      contacts.listContacts();
-      break;
+async function main() {
 
-    case "get":
-      contacts.getContactById(id);
-      break;
+  const app = express();
 
-    case "add":
-      contacts.addContact(name, email, phone);
-      break;
+  await ContactsDatabase.init()
 
-    case "remove":
-      contacts.removeContact(id);
-      break;
+  app.use(express.json());
+  app.use(cors());
 
-    default:
-      console.warn("\x1B[31m Unknown action type!");
-  }
+  app.use("/contacts", auth, contactsRouter);
+  app.use('/auth',  userRouter)
+
+  app.use((req, res) => {
+    res.status(404).send({ message: "information not found" });
+  });
+
+  app.listen(process.env.PORT, (err) =>
+    err
+      ? console.error(err)
+      : console.log("Server started on port", process.env.PORT)
+  );
 }
 
-invokeAction(argv);
+main().catch(console.error);
